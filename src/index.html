@@ -7,7 +7,14 @@
   </head>
   <body>
     <h1>Hello</h1>
-    <p>Welcome to the breakout game.</p>
+    <div class="headline">
+      <p style="float:left;">Welcome to the breakout game.</p>
+    </div>
+    <div class="information" style="display: flex; justify-content: flex-end; flex-direction: column;">
+      <div>Paddle X-Position:<span id="paddle-x"></span></div><br>
+      <div>Ball Position X:<span id="ball-x"></span>&nbsp; Y:<span id="ball-y"></span></div>
+      <div id="hitbar" style="width: 50px; height: 5px; background-color: lightgrey;"></div>
+    </div>
     <canvas id="mainCanvas" width="480" height="320"></canvas>
     <script src="./renderer.js"></script>
   </body>
