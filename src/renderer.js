@@ -42,6 +42,25 @@ var paddleY = canvas.height / 20 * 19; // postion is sleightly over the bottom
 var paddleMoveRight = false;
 var paddleMoveLeft = false;
 
+var brickRowCount = 3;
+var brickColumnCount = 5;
+var brickwidth = 75;
+var brickHeight = 20;
+var brickPadding = 10;
+var brickOffsetTop = 30;
+var brickOffsetLeft = 30;
+
+var bricks = [];
+
+var score = 0;
+
+for(var brickColumn = 0; brickColumn <= brickColumnCount; brickColumn++) {
+    bricks[brickColumn] = [];
+    for(var brickRow = 0; brickRow <= brickRowCount; brickRow++) {
+        bricks[brickColumn][brickRow] = { x: 0, y: 0, status: 1};
+    }
+}
+
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 
@@ -81,6 +100,24 @@ function drawPaddle() {
     context.closePath();
 }
 
+function drawBricks() {
+    for( var column = 0; column < brickColumnCount; column++) {
+        for(var row = 0; row < brickRowCount; row++) {
+            if(bricks[column][row].status == 1) {
+                var brickX = (column*(brickwidth+brickPadding))+brickOffsetLeft;
+                var brickY = (row*(brickHeight+brickPadding))+brickOffsetTop;
+                bricks[column][row].x = brickX;
+                bricks[column][row].y = brickY;
+                context.beginPath();
+                context.rect(brickX, brickY, brickwidth, brickHeight);
+                context.fillStyle = mainColor;
+                context.fill();
+                context.closePath();    
+            }
+        }
+    }
+}
+
 function switchColor() {
     if(color == ballColor2) {
         color = mainColor;
@@ -89,8 +126,17 @@ function switchColor() {
     }
 }
 
+function drawScore() {
+    context.font = "16px Arial";
+    context.fillStyle = mainColor;
+    context.fillText("Score: "+score, 8, 20);
+}
+
 function draw() {
     context.clearRect(0, 0, mainwidth, canvas.height);
+
+    drawBricks();
+
     if( ball_x-ballRadius <= 0 || ball_x+ballRadius >= mainwidth) {
         dx = -dx;
         switchColor();
@@ -133,8 +179,30 @@ function draw() {
     document.getElementById('ball-y').innerHTML = ball_y.toString();
     document.getElementById('hitbar').style.backgroundColor = markHit;
 
+    collisionDetection();
     drawBall();
     drawPaddle();
+    drawScore();
 }
+
+function collisionDetection() {
+    for(var c=0; c < brickColumnCount; c++) {
+        for(var r=0; r<brickRowCount; r++) {
+            var b = bricks[c][r];
+            if(b.status == 1) {
+                if(ball_x > b.x && ball_x < b.x+brickwidth && ball_y > b.y && ball_y < b.y+brickHeight) {
+                    dy = -dy;
+                    b.status = 0;
+                    score++;
+                    if(score == brickRowCount*brickColumnCount) {
+                        alert("You've won");
+                        clearInterval(interval);
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 var interval = setInterval(draw, 10);
