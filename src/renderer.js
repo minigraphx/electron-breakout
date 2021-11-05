@@ -53,17 +53,15 @@ var brickOffsetLeft = 30;
 var bricks = [];
 
 var score = 0;
+var lives = 3;
 
-for(var brickColumn = 0; brickColumn <= brickColumnCount; brickColumn++) {
-    bricks[brickColumn] = [];
-    for(var brickRow = 0; brickRow <= brickRowCount; brickRow++) {
-        bricks[brickColumn][brickRow] = { x: 0, y: 0, status: 1};
-    }
-}
+var running = false;
 
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 document.addEventListener("mousemove", mouseMoveHandler, false);
+
+initializeBricks();
 
 function mouseMoveHandler(e) {
     var relativeX = e.clientX - canvas.offsetLeft;
@@ -89,6 +87,31 @@ function keyUpHandler(e) {
     }
     else if (e.key == "Left" || e.key == "ArrowLeft") {
         paddleMoveLeft = false;
+    }
+    if(e.keyCode == 32 && !running) {
+        initializeBricks();
+        initGame();
+        interval = setInterval(draw, 10);
+        running = true;
+    }
+}
+
+function initGame() {
+    ball_x = canvas.width/2;
+    ball_y = canvas.height-30;
+    dx = 2;
+    dy = -2;
+    paddleX = (canvas.width-paddleWidth)/2;
+    lives = 3;
+    score = 0;
+}
+
+function initializeBricks() {
+    for(var brickColumn = 0; brickColumn <= brickColumnCount; brickColumn++) {
+        bricks[brickColumn] = [];
+        for(var brickRow = 0; brickRow <= brickRowCount; brickRow++) {
+            bricks[brickColumn][brickRow] = { x: 0, y: 0, status: 1};
+        }
     }
 }
 
@@ -126,18 +149,16 @@ function drawBricks() {
     }
 }
 
-function switchColor() {
-    if(color == ballColor2) {
-        color = mainColor;
-    } else {
-        color = ballColor2;
-    }
-}
-
 function drawScore() {
     context.font = "16px Arial";
     context.fillStyle = mainColor;
     context.fillText("Score: "+score, 8, 20);
+}
+
+function drawLives() {
+    context.font = "16px Arial";
+    context.fillStyle = mainColor;
+    context.fillText("Lives: "+lives, canvas.width-65, 20);
 }
 
 function draw() {
@@ -155,8 +176,18 @@ function draw() {
     }
 
     if( ball_y+ballRadius >= canvas.height ) { //bottom wall
-        alert("GAME OVER");
-        clearInterval(interval);
+        lives--;
+        if(!lives) {
+            alert("GAME OVER. Press Space to Start again.");
+            clearInterval(interval);
+            running = false;
+        } else {
+            ball_x = canvas.width/2;
+            ball_y = canvas.height-30;
+            dx = 2;
+            dy = -2;
+            paddleX = (canvas.width-paddleWidth)/2;
+        }
     }
 
     markHit = noHitColor;
@@ -191,6 +222,15 @@ function draw() {
     drawBall();
     drawPaddle();
     drawScore();
+    drawLives();
+}
+
+function switchColor() {
+    if(color == ballColor2) {
+        color = mainColor;
+    } else {
+        color = ballColor2;
+    }
 }
 
 function collisionDetection() {
@@ -203,8 +243,9 @@ function collisionDetection() {
                     b.status = 0;
                     score++;
                     if(score == brickRowCount*brickColumnCount) {
-                        alert("You've won");
+                        alert("You've won. Press Space to play again.");
                         clearInterval(interval);
+                        running = false;
                     }
                 }
             }
@@ -214,3 +255,4 @@ function collisionDetection() {
 
 
 var interval = setInterval(draw, 10);
+running = true;
