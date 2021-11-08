@@ -51,11 +51,23 @@ var breakout = new Phaser.Class({
 
     create: function() {
 
+        cursorKeys = this.input.keyboard.createCursorKeys();
+        //usage: cursorKeys.up.isDown; cursorKeys.space.isdown;
+        paddle = this.add.rectangle(200, 400, paddleWidth, paddleHeight, mainColor);
+        paddle.setStrokeStyle(1, mainColor);
+
+        
         // bounce anywhere but bottom
         this.physics.world.setBoundsCollision(true, true, true, false);
 
-        var brick = this.add.rectangle(10, 10, brickwidth, brickHeight, 0x6666ff);
-        brick.setStrokeStyle(2, 0x0095DD);
+        var brick = this.add.rectangle(10, 10, brickwidth, brickHeight, mainColor);
+        brick.setStrokeStyle(2, mainColor);
+
+        this.physics.world.enable(paddle);
+        paddle.body.setCollideWorldBounds(true);
+        paddle.body.setBounce(1);
+        paddle.body.setVelocity(100,0);
+
 
         // create bricks
         /*
@@ -67,10 +79,14 @@ var breakout = new Phaser.Class({
     },
 
     update: function() {
-
+        paddle.body.setVelocity(0,0);
+        if (cursorKeys.left.isDown) paddle.body.setVelocity(-300,0);
+        if (cursorKeys.right.isDown) paddle.body.setVelocity(300,0);
     }
 });
 
+var paddle;
+var cursorKeys;
 
 var config = {
     type: Phaser.AUTO, // Phaser.WEBGL or Phaser.CANVAS
@@ -90,13 +106,13 @@ var config = {
 var game = new Phaser.Game(config);
 
 export default game;
-/*
-var ball_x = canvas.width/2;
-var ball_y = canvas.height-30;
+
+//var ball_x = canvas.width/2;
+//var ball_y = canvas.height-30;
 var ballRadius = 10;
-var mainColor = "#0095DD";
-var ballColor2 = "#DD5500";
-var color = "#FFFFFF";
+var mainColor = 0x0095DD;
+var ballColor2 = 0xDD5500;
+var color = 0xFFFFFF;
 var dx = 2;
 var dy = -2;
 var paddleSpeed = 4;
@@ -106,12 +122,10 @@ var hitColor = "red";
 
 var paddleHeight = 10
 var paddleWidth = 75;
-var paddleX = (canvas.width-paddleWidth) / 2;
-var paddleY = canvas.height / 20 * 19; // postion is sleightly over the bottom
+//var paddleX = (canvas.width-paddleWidth) / 2;
+//var paddleY = canvas.height / 20 * 19; // postion is sleightly over the bottom
 var paddleMoveRight = false;
 var paddleMoveLeft = false;
-
-*/
 
 var brickRowCount = 3;
 var brickColumnCount = 5;
