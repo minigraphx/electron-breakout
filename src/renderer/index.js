@@ -1,7 +1,11 @@
-var canvas = document.getElementById('mainCanvas');
-var context = canvas.getContext("2d");
+//var canvas = document.getElementById('mainCanvas');
+//var context = canvas.getContext("2d");
 
-mainwidth = canvas.width;
+//phaser = require('phaser');
+import Phaser, { Game } from 'phaser';
+
+
+//mainwidth = canvas.width;
 /* canvas painting tests
 context.beginPath();
 context.rect(20, 40, 20, 20);
@@ -22,6 +26,71 @@ context.stroke();
 context.closePath();
 */
 
+//import 'phaser';
+
+var breakout = new Phaser.Class({
+    Extends: Phaser.Scene,
+
+    initialize:
+
+    function Breakout() {
+        Phaser.Scene.call(this, { key: 'breakout'});
+
+        /*
+        this.bricks;
+        this.paddle;
+        this.ball;
+        */
+    },
+
+    preload: function() {
+        game.scale.scaleMode = Phaser.ScaleModes.DEFAULT;
+        game.scale.pageAlignHorizontally = true;
+        game.scale.pageAlignVertically = true;
+    },
+
+    create: function() {
+
+        // bounce anywhere but bottom
+        this.physics.world.setBoundsCollision(true, true, true, false);
+
+        var brick = this.add.rectangle(10, 10, brickwidth, brickHeight, 0x6666ff);
+        brick.setStrokeStyle(2, 0x0095DD);
+
+        // create bricks
+        /*
+        this.bricks = this.physics.add.staticGroup({
+            frameQuantity: 10,
+            gridAlign: { width: 10, height: 6, cellWidth: 64, cellHeight: 32, x: 112, y:100 }
+        });
+        */
+    },
+
+    update: function() {
+
+    }
+});
+
+
+var config = {
+    type: Phaser.AUTO, // Phaser.WEBGL or Phaser.CANVAS
+    width: 800,
+    height: 600,
+    backgroundColor: '#eee',
+    scene: [ breakout ],
+    physics: {
+        default: 'arcade',
+
+        arcade: {
+            debug: false,
+        },
+    }
+};
+
+var game = new Phaser.Game(config);
+
+export default game;
+/*
 var ball_x = canvas.width/2;
 var ball_y = canvas.height-30;
 var ballRadius = 10;
@@ -42,6 +111,8 @@ var paddleY = canvas.height / 20 * 19; // postion is sleightly over the bottom
 var paddleMoveRight = false;
 var paddleMoveLeft = false;
 
+*/
+
 var brickRowCount = 3;
 var brickColumnCount = 5;
 var brickwidth = 75;
@@ -50,6 +121,7 @@ var brickPadding = 10;
 var brickOffsetTop = 30;
 var brickOffsetLeft = 30;
 
+/*
 var bricks = [];
 
 var score = 0;
@@ -252,7 +324,8 @@ function collisionDetection() {
         }
     }
 }
+*/
 
 
-var interval = setInterval(draw, 10);
-running = true;
+//var interval = setInterval(draw, 10);
+//running = true;
