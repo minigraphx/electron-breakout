@@ -2,7 +2,7 @@
 //var context = canvas.getContext("2d");
 
 //phaser = require('phaser');
-import Phaser, { Game } from 'phaser';
+import Phaser from 'phaser';
 
 
 //mainwidth = canvas.width;
@@ -36,11 +36,9 @@ var breakout = new Phaser.Class({
     function Breakout() {
         Phaser.Scene.call(this, { key: 'breakout'});
 
-        /*
         this.bricks;
         this.paddle;
         this.ball;
-        */
     },
 
     preload: function() {
@@ -53,35 +51,49 @@ var breakout = new Phaser.Class({
 
         cursorKeys = this.input.keyboard.createCursorKeys();
         //usage: cursorKeys.up.isDown; cursorKeys.space.isdown;
-        paddle = this.add.rectangle(200, 400, paddleWidth, paddleHeight, mainColor);
+        paddle = this.add.rectangle(400-paddleWidth/2, 540, paddleWidth, paddleHeight, mainColor);
         paddle.setStrokeStyle(1, mainColor);
 
-        
         // bounce anywhere but bottom
         this.physics.world.setBoundsCollision(true, true, true, false);
-
-        var brick = this.add.rectangle(10, 10, brickwidth, brickHeight, mainColor);
-        brick.setStrokeStyle(2, mainColor);
 
         this.physics.world.enable(paddle);
         paddle.body.setCollideWorldBounds(true);
         paddle.body.setBounce(1);
-        paddle.body.setVelocity(100,0);
 
+//        let brick = this.add.rectangle(10, 10, brickwidth, brickHeight, mainColor);
+//        brick.setStrokeStyle(2, mainColor);
 
         // create bricks
-        /*
-        this.bricks = this.physics.add.staticGroup({
-            frameQuantity: 10,
-            gridAlign: { width: 10, height: 6, cellWidth: 64, cellHeight: 32, x: 112, y:100 }
-        });
-        */
+        this.bricks = this.physics.add.staticGroup();
+        for(let column = 0; column < brickColumnCount; column++) {
+            for(let row = 0; row < brickRowCount; row++) {
+                let brickX = (column*(brickwidth+brickPadding))+brickOffsetLeft;
+                let brickY = (row*(brickHeight+brickPadding))+brickOffsetTop;
+
+                let brick = this.add.rectangle(brickX, brickY, brickwidth, brickHeight, mainColor);
+                this.bricks.add(brick);
+            }
+        }
+
+        // create ball
+        this.ball = this.add.ellipse(300, 300, 10, 10);
+        this.ball.setStrokeStyle(1, mainColor);
+        this.physics.world.enable(this.ball);
+        this.ball.body.velocity.x = 200;
+        this.ball.body.velocity.y = 200;
+        this.ball.body.setBounce(1, 1);
+        this.ball.body.setCollideWorldBounds(true);
     },
 
     update: function() {
         paddle.body.setVelocity(0,0);
-        if (cursorKeys.left.isDown) paddle.body.setVelocity(-300,0);
-        if (cursorKeys.right.isDown) paddle.body.setVelocity(300,0);
+        if (cursorKeys.left.isDown) paddle.body.setVelocity(-paddleSpeed, 0);
+        if (cursorKeys.right.isDown) paddle.body.setVelocity(paddleSpeed, 0);
+    },
+
+    render: function() {
+        game.debug.body(bricks);
     }
 });
 
@@ -98,7 +110,7 @@ var config = {
         default: 'arcade',
 
         arcade: {
-            debug: false,
+            debug: true,
         },
     }
 };
@@ -115,7 +127,7 @@ var ballColor2 = 0xDD5500;
 var color = 0xFFFFFF;
 var dx = 2;
 var dy = -2;
-var paddleSpeed = 4;
+var paddleSpeed = 300;
 
 var noHitColor = "lightgrey";
 var hitColor = "red";
@@ -124,8 +136,6 @@ var paddleHeight = 10
 var paddleWidth = 75;
 //var paddleX = (canvas.width-paddleWidth) / 2;
 //var paddleY = canvas.height / 20 * 19; // postion is sleightly over the bottom
-var paddleMoveRight = false;
-var paddleMoveLeft = false;
 
 var brickRowCount = 3;
 var brickColumnCount = 5;
@@ -135,9 +145,9 @@ var brickPadding = 10;
 var brickOffsetTop = 30;
 var brickOffsetLeft = 30;
 
-/*
-var bricks = [];
+var bricks;
 
+/*
 var score = 0;
 var lives = 3;
 
