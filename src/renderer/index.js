@@ -7,8 +7,11 @@ var breakout = new Phaser.Class({
     function Breakout() {
         Phaser.Scene.call(this, { key: 'breakout'});
 
+        /** @var bricks Phaser.Physics.Arcade.StaticGroup */
         this.bricks;
+        /** @var paddle Phaser.GameObjects.Rectangle */
         this.paddle;
+        /** @var ball Phaser.GameObjects.Ellipse */
         this.ball;
 
         this.score = 0;
@@ -16,6 +19,16 @@ var breakout = new Phaser.Class({
 
         this.scoreHUD;
         this.livesHUD;
+        this.mouseHUD;
+        /** @var gameOverText Phaser.GameObjects.Text */
+        this.gameOverText;
+        /** @var winText Phaser.GameObjects.Text */
+        this.winText;
+
+        /** @var isPaused Boolean */
+        this.isPaused = false;
+
+        this.paddleHeight = config.height-config.height/10;
     },
 
     preload: function() {
@@ -27,7 +40,7 @@ var breakout = new Phaser.Class({
     create: function() {
         cursorKeys = this.input.keyboard.createCursorKeys();
 
-        this.paddle = this.add.rectangle(config.width/2-paddleWidth/2, config.height-config.height/10, paddleWidth, paddleHeight, mainColor);
+        this.paddle = this.add.rectangle(config.width/2-paddleWidth/2, this.paddleHeight, paddleWidth, paddleHeight, mainColor);
 //        this.paddle.setStrokeStyle(1, mainColor);
 
         // bounce anywhere but bottom
@@ -42,31 +55,79 @@ var breakout = new Phaser.Class({
         this.createBricks();
 
         // create ball
-        this.ball = this.add.ellipse(config.width/2-ballRadius, config.height/2-ballRadius, ballRadius, ballRadius);
-        this.ball.setStrokeStyle(1, mainColor);
+        this.ball = this.add.ellipse(config.width/2-ballRadius, config.height/2-ballRadius, ballRadius, ballRadius, mainColor);
+        //this.ball.setStrokeStyle(1, mainColor);
         this.physics.world.enable(this.ball);
-        this.ball.body.velocity.x = ballVelocity;
-        this.ball.body.velocity.y = ballVelocity;
+        this.resetBall();
         this.ball.body.setCollideWorldBounds(true);
         this.ball.body.setBounce(1, 1);
 
         this.physics.add.collider(this.ball, this.bricks, this.hitBrick, null, this);
         this.physics.add.collider(this.ball, this.paddle, this.hitPaddle, null, this);
 
-        this.livesHUD = this.add.text(700, 10, 'Lives: '+this.lives, {color: 0xFFFFFF});
-        this.scoreHUD = this.add.text(500, 10, 'Score: '+this.score, {color: 0xFFFFFF});
+        this.livesHUD = this.add.text(700, config.height-20, 'Lives: '+this.lives, {color: 0xFFFFFF});
+        this.scoreHUD = this.add.text(500, config.height-20, 'Score: '+this.score, {color: 0xFFFFFF});
+        this.mouseHUD = this.add.text(10, config.height-20, 'Mouse Movement X: ', {color: 0xFFFFFF});
+
+        /** @var gameOverText Phaser.GameObjects.Text */
+        this.gameOverText = this.add.text(config.width/2-50, config.height/2, 'GAME OVER', { color: 0xFFFFFF });
+        this.gameOverText.visible = false;
+        /** @var winText Phaser.GameObjects.Text */
+        this.winText = this.add.text(config.width/2-50, config.height/2, "You've Won", { color: 0xFFFFFF, fontFamily: 'Arial', fontSize: 24 });
+        this.winText.visible = false;
+
+        this.input.on('pointermove', this.mouseMovePaddle);
     },
 
     update: function() {
+        //TODO: only call stuff when needed (i.e. modify text)
+
         this.paddle.body.setVelocity(0,0);
-        if (cursorKeys.left.isDown) this.paddle.body.setVelocity(-paddleSpeed, 0);
-        if (cursorKeys.right.isDown) this.paddle.body.setVelocity(paddleSpeed, 0);
+        if(!this.isPaused) {
+            if (cursorKeys.left.isDown ) this.paddle.body.setVelocity(-paddleSpeed, 0);
+            if (cursorKeys.right.isDown) this.paddle.body.setVelocity(paddleSpeed, 0);
+        } else {
+            this.ball.body.setVelocity(0,0);
+        }
 
         // if the ball is below bottom, reset ball and subtract 1 live
         if(this.ball.y > config.height) {
             this.resetBall();
             this.lives -= 1;
+        }
+
+        if( this.lives < 0 || this.bricks.countActive() === 0) {
+            this.isPaused = true;
+            if(this.lives < 0) {
+                this.gameOverText.visible = true;
+            } else {
+                this.winText.visible = true;
+            }
+            if(cursorKeys.space.isDown) {
+                this.restart();
+            }
+        } else {
             this.livesHUD.text = 'Lives: '+this.lives;
+        }
+
+    },
+
+    restart: function () {
+        this.lives = 3;
+        this.score = 0;
+        this.isPaused = false;
+        this.gameOverText.visible = false;
+        this.winText.visible = false;
+        this.resetLevel();
+    },
+
+    mouseMovePaddle: function(pointer) {
+        if(!this.scene.isPaused) {
+            let mousePos = pointer.position.x;
+            this.scene.mouseHUD.text = 'Mouse Movement X: '+mousePos;
+            if( (mousePos < 0 && this.scene.paddle.body.position.x > 0) || (mousePos < config.width && this.scene.paddle.body.position.x < config.width) ) {
+                this.scene.paddle.setPosition(mousePos, this.scene.paddleHeight);
+            }
         }
     },
 
@@ -74,12 +135,6 @@ var breakout = new Phaser.Class({
         brick.destroy(); // better just deactivate bricks and reactivate on reset !?
         this.score += 1;
         this.scoreHUD.text = 'Score: '+this.score;
-
-        if( this.bricks.countActive() === 0 ) {
-            console.log('restart');
-            this.resetLevel();
-            console.log('active: '+this.bricks.countActive());
-        }
     },
 
     hitPaddle: function(ball, paddle) {
@@ -88,16 +143,16 @@ var breakout = new Phaser.Class({
 
     resetBall: function() {
         this.ball.setPosition(this.paddle.x, config.height/2);
-        this.ball.body.setVelocity(ballVelocity, ballVelocity);
-        console.log('active: '+this.bricks.countActive());
+        this.ball.body.setVelocity(ballVelocity * (-.5+Math.random()), ballVelocity);
     },
 
     resetLevel: function() {
+        this.bricks.clear(false, true);
         this.resetBall();
         this.createBricks();
+
 //        this.bricks.children.each(function(brick) {
 //        });
-        console.log('active: '+this.bricks.countActive());
     },
 
     createBricks: function() {
@@ -105,7 +160,6 @@ var breakout = new Phaser.Class({
             for(let row = 0; row < brickRowCount; row++) {
                 let brickX = (column*(brickwidth+brickPadding))+brickOffsetLeft;
                 let brickY = (row*(brickHeight+brickPadding))+brickOffsetTop;
-
                 let brick = this.add.rectangle(brickX, brickY, brickwidth, brickHeight, mainColor);
                 this.bricks.add(brick);
             }
@@ -137,8 +191,6 @@ export default game;
 
 var ballRadius = 10;
 var mainColor = 0x0095DD;
-var ballColor2 = 0xDD5500;
-var color = 0xFFFFFF;
 var ballVelocity = 200;
 var paddleSpeed = 300;
 
@@ -156,118 +208,5 @@ var brickPadding = 10;
 var brickOffsetTop = 30;
 var brickOffsetLeft = 60;
 
-
-/*
-function mouseMoveHandler(e) {
-    var relativeX = e.clientX - canvas.offsetLeft;
-    if(relativeX > 0 && relativeX < canvas.width) {
-        paddleX = relativeX - paddleWidth/2;
-    }
-}
-
-function drawBricks() {
-    for( var column = 0; column < brickColumnCount; column++) {
-        for(var row = 0; row < brickRowCount; row++) {
-            if(bricks[column][row].status == 1) {
-                var brickX = (column*(brickwidth+brickPadding))+brickOffsetLeft;
-                var brickY = (row*(brickHeight+brickPadding))+brickOffsetTop;
-                bricks[column][row].x = brickX;
-                bricks[column][row].y = brickY;
-                context.beginPath();
-                context.rect(brickX, brickY, brickwidth, brickHeight);
-                context.fillStyle = mainColor;
-                context.fill();
-                context.closePath();    
-            }
-        }
-    }
-}
-
-function drawScore() {
-    context.font = "16px Arial";
-    context.fillStyle = mainColor;
-    context.fillText("Score: "+score, 8, 20);
-}
-
-function drawLives() {
-    context.font = "16px Arial";
-    context.fillStyle = mainColor;
-    context.fillText("Lives: "+lives, canvas.width-65, 20);
-}
-
-function draw() {
-    context.clearRect(0, 0, mainwidth, canvas.height);
-
-    drawBricks();
-
-    if( ball_x-ballRadius <= 0 || ball_x+ballRadius >= mainwidth) {
-        dx = -dx;
-        switchColor();
-    }
-    if(ball_y-ballRadius <= 0) {
-        dy = -dy;
-        switchColor();
-    }
-
-    if( ball_y+ballRadius >= canvas.height ) { //bottom wall
-        lives--;
-        if(!lives) {
-            alert("GAME OVER. Press Space to Start again.");
-            clearInterval(interval);
-            running = false;
-        } else {
-            ball_x = canvas.width/2;
-            ball_y = canvas.height-30;
-            dx = 2;
-            dy = -2;
-            paddleX = (canvas.width-paddleWidth)/2;
-        }
-    }
-
-    markHit = noHitColor;
-    //bounce from bottom only if hit by paddle
-    if(ball_x >= paddleX && ball_x <= paddleX+paddleWidth) {
-        markHit = hitColor;
-        if(ball_y+ballRadius >= paddleY) {  // if below paddle, turn
-            dy = -dy;
-        }
-    }
-
-    ball_x += dx;
-    ball_y += dy;
-
-    if(paddleMoveRight) {
-        paddleX += paddleSpeed;
-        if(paddleX+paddleWidth > mainwidth) {
-            paddleX = mainwidth - paddleWidth;
-        }
-    } else if(paddleMoveLeft) {
-        paddleX -= paddleSpeed;
-        if (paddleX < 0) {
-            paddleX = 0;
-        }
-    }
-    document.getElementById('paddle-x').innerHTML = paddleX.toString();
-    document.getElementById('ball-x').innerHTML = ball_x.toString();
-    document.getElementById('ball-y').innerHTML = ball_y.toString();
-    document.getElementById('hitbar').style.backgroundColor = markHit;
-
-    collisionDetection();
-    drawBall();
-    drawPaddle();
-    drawScore();
-    drawLives();
-}
-
-function switchColor() {
-    if(color == ballColor2) {
-        color = mainColor;
-    } else {
-        color = ballColor2;
-    }
-}
-
-*/
-
-//var interval = setInterval(draw, 10);
-//running = true;
+brickRowCount = 1;
+brickColumnCount = 1;
