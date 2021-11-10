@@ -4,13 +4,18 @@ var breakout = new Phaser.Class({
     Extends: Phaser.Scene,
 
     initialize:
-
     function Breakout() {
         Phaser.Scene.call(this, { key: 'breakout'});
 
         this.bricks;
         this.paddle;
         this.ball;
+
+        this.score = 0;
+        this.lives = 3;
+
+        this.scoreHUD;
+        this.livesHUD;
     },
 
     preload: function() {
@@ -20,24 +25,82 @@ var breakout = new Phaser.Class({
     },
 
     create: function() {
-
         cursorKeys = this.input.keyboard.createCursorKeys();
-        //usage: cursorKeys.up.isDown; cursorKeys.space.isdown;
-        this.paddle = this.add.rectangle(400-paddleWidth/2, 540, paddleWidth, paddleHeight, mainColor);
-        this.paddle.setStrokeStyle(1, mainColor);
+
+        this.paddle = this.add.rectangle(config.width/2-paddleWidth/2, config.height-config.height/10, paddleWidth, paddleHeight, mainColor);
+//        this.paddle.setStrokeStyle(1, mainColor);
 
         // bounce anywhere but bottom
         this.physics.world.setBoundsCollision(true, true, true, false);
-
         this.physics.world.enable(this.paddle);
+
         this.paddle.body.setCollideWorldBounds(true);
         this.paddle.body.setBounce(1);
 
-//        let brick = this.add.rectangle(10, 10, brickwidth, brickHeight, mainColor);
-//        brick.setStrokeStyle(2, mainColor);
-
         // create bricks
         this.bricks = this.physics.add.staticGroup();
+        this.createBricks();
+
+        // create ball
+        this.ball = this.add.ellipse(config.width/2-ballRadius, config.height/2-ballRadius, ballRadius, ballRadius);
+        this.ball.setStrokeStyle(1, mainColor);
+        this.physics.world.enable(this.ball);
+        this.ball.body.velocity.x = ballVelocity;
+        this.ball.body.velocity.y = ballVelocity;
+        this.ball.body.setCollideWorldBounds(true);
+        this.ball.body.setBounce(1, 1);
+
+        this.physics.add.collider(this.ball, this.bricks, this.hitBrick, null, this);
+        this.physics.add.collider(this.ball, this.paddle, this.hitPaddle, null, this);
+
+        this.livesHUD = this.add.text(700, 10, 'Lives: '+this.lives, {color: 0xFFFFFF});
+        this.scoreHUD = this.add.text(500, 10, 'Score: '+this.score, {color: 0xFFFFFF});
+    },
+
+    update: function() {
+        this.paddle.body.setVelocity(0,0);
+        if (cursorKeys.left.isDown) this.paddle.body.setVelocity(-paddleSpeed, 0);
+        if (cursorKeys.right.isDown) this.paddle.body.setVelocity(paddleSpeed, 0);
+
+        // if the ball is below bottom, reset ball and subtract 1 live
+        if(this.ball.y > config.height) {
+            this.resetBall();
+            this.lives -= 1;
+            this.livesHUD.text = 'Lives: '+this.lives;
+        }
+    },
+
+    hitBrick: function(ball, brick) {
+        brick.destroy(); // better just deactivate bricks and reactivate on reset !?
+        this.score += 1;
+        this.scoreHUD.text = 'Score: '+this.score;
+
+        if( this.bricks.countActive() === 0 ) {
+            console.log('restart');
+            this.resetLevel();
+            console.log('active: '+this.bricks.countActive());
+        }
+    },
+
+    hitPaddle: function(ball, paddle) {
+        this.ball.body.velocity.y = -ballVelocity;
+    },
+
+    resetBall: function() {
+        this.ball.setPosition(this.paddle.x, config.height/2);
+        this.ball.body.setVelocity(ballVelocity, ballVelocity);
+        console.log('active: '+this.bricks.countActive());
+    },
+
+    resetLevel: function() {
+        this.resetBall();
+        this.createBricks();
+//        this.bricks.children.each(function(brick) {
+//        });
+        console.log('active: '+this.bricks.countActive());
+    },
+
+    createBricks: function() {
         for(let column = 0; column < brickColumnCount; column++) {
             for(let row = 0; row < brickRowCount; row++) {
                 let brickX = (column*(brickwidth+brickPadding))+brickOffsetLeft;
@@ -47,40 +110,8 @@ var breakout = new Phaser.Class({
                 this.bricks.add(brick);
             }
         }
-
-        // create ball
-        this.ball = this.add.ellipse(300, 300, 10, 10);
-        this.ball.setStrokeStyle(1, mainColor);
-        this.physics.world.enable(this.ball);
-        this.ball.body.velocity.x = 200;
-        this.ball.body.velocity.y = 200;
-        this.ball.body.setCollideWorldBounds(true);
-        this.ball.body.setBounce(1, 1);
-
-        this.physics.add.collider(this.ball, this.bricks, this.hitBrick, null, this);
-        this.physics.add.collider(this.ball, this.paddle, this.hitPaddle, null, this);
-    },
-
-    update: function() {
-        this.physics.collide(this.ball, this.paddle);
-
-        this.physics.collide(this.ball, this.bricks, this.hit);
-
-        this.paddle.body.setVelocity(0,0);
-        if (cursorKeys.left.isDown) this.paddle.body.setVelocity(-paddleSpeed, 0);
-        if (cursorKeys.right.isDown) this.paddle.body.setVelocity(paddleSpeed, 0);
-    },
-
-    hitBrick: function(ball, brick) {
-        console.log('hit brick');
-
-        brick.destroy();
-    },
-
-    hitPaddle: function(ball, paddle) {
-        console.log('hit paddle');
-        this.ball.body.velocity.y = -200;
     }
+
 });
 
 var cursorKeys;
@@ -108,8 +139,7 @@ var ballRadius = 10;
 var mainColor = 0x0095DD;
 var ballColor2 = 0xDD5500;
 var color = 0xFFFFFF;
-var dx = 2;
-var dy = -2;
+var ballVelocity = 200;
 var paddleSpeed = 300;
 
 var noHitColor = "lightgrey";
@@ -126,29 +156,13 @@ var brickPadding = 10;
 var brickOffsetTop = 30;
 var brickOffsetLeft = 60;
 
+
 /*
-var score = 0;
-var lives = 3;
-
-var running = false;
-
-initializeBricks();
-
 function mouseMoveHandler(e) {
     var relativeX = e.clientX - canvas.offsetLeft;
     if(relativeX > 0 && relativeX < canvas.width) {
         paddleX = relativeX - paddleWidth/2;
     }
-}
-
-function initGame() {
-    ball_x = canvas.width/2;
-    ball_y = canvas.height-30;
-    dx = 2;
-    dy = -2;
-    paddleX = (canvas.width-paddleWidth)/2;
-    lives = 3;
-    score = 0;
 }
 
 function drawBricks() {
