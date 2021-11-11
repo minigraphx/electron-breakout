@@ -1,61 +1,38 @@
-var canvas = document.getElementById('mainCanvas');
-var context = canvas.getContext("2d");
+const canvas = document.getElementById('mainCanvas');
+const context = canvas.getContext("2d");
 
 mainwidth = canvas.width;
-/* canvas painting tests
-context.beginPath();
-context.rect(20, 40, 20, 20);
-context.fillStyle = "#FF0000";
-context.fill();
-context.closePath();
 
-context.beginPath();
-context.arc(240, 160, 20, 0, Math.PI*2, false);
-context.fillStyle = "green";
-context.fill();
-context.closePath();
+let ball_x = canvas.width / 2;
+let ball_y = canvas.height - 30;
+let ballRadius = 10;
+let mainColor = "#0095DD";
+let ballColor2 = "#DD5500";
+let color = "#FFFFFF";
+let dx = 2;
+let dy = -2;
+let paddleSpeed = 4;
 
-context.beginPath();
-context.rect(160, 10, 100, 40);
-context.strokeStyle = "rgba(0, 0, 255, 0.5)";
-context.stroke();
-context.closePath();
-*/
+let noHitColor = "lightgrey";
+let hitColor = "red";
+let paddleHeight = 10
+let paddleWidth = 75;
+let paddleX = (canvas.width-paddleWidth) / 2;
+let paddleY = canvas.height / 20 * 19; // position is slightly over the bottom
+let paddleMoveRight = false;
+let paddleMoveLeft = false;
+let brickRowCount = 3;
+let brickColumnCount = 5;
+let brickWidth = 75;
+let brickHeight = 20;
+let brickPadding = 10;
+let brickOffsetTop = 30;
+let brickOffsetLeft = 3;
+let bricks = [];
+let score = 0;
+let lives = 3;
 
-var ball_x = canvas.width/2;
-var ball_y = canvas.height-30;
-var ballRadius = 10;
-var mainColor = "#0095DD";
-var ballColor2 = "#DD5500";
-var color = "#FFFFFF";
-var dx = 2;
-var dy = -2;
-var paddleSpeed = 4;
-
-var noHitColor = "lightgrey";
-var hitColor = "red";
-
-var paddleHeight = 10
-var paddleWidth = 75;
-var paddleX = (canvas.width-paddleWidth) / 2;
-var paddleY = canvas.height / 20 * 19; // postion is sleightly over the bottom
-var paddleMoveRight = false;
-var paddleMoveLeft = false;
-
-var brickRowCount = 3;
-var brickColumnCount = 5;
-var brickwidth = 75;
-var brickHeight = 20;
-var brickPadding = 10;
-var brickOffsetTop = 30;
-var brickOffsetLeft = 30;
-
-var bricks = [];
-
-var score = 0;
-var lives = 3;
-
-var running = false;
+let running = false;
 
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
@@ -64,31 +41,33 @@ document.addEventListener("mousemove", mouseMoveHandler, false);
 initializeBricks();
 
 function mouseMoveHandler(e) {
-    var relativeX = e.clientX - canvas.offsetLeft;
+    let relativeX = e.clientX - canvas.offsetLeft;
     if(relativeX > 0 && relativeX < canvas.width) {
         paddleX = relativeX - paddleWidth/2;
     }
 }
 
 function keyDownHandler(e) {
-    if(e.key == "Right" || e.key == "ArrowRight") {
+    if(e.key === "Right" || e.key === "ArrowRight") {
         paddleMoveRight = true;
         paddleMoveLeft = false;
     }
-    else if (e.key == "Left" || e.key == "ArrowLeft") {
+    else if (e.key === "Left" || e.key === "ArrowLeft") {
         paddleMoveLeft = true;
         paddleMoveRight = false;
     }
 }
 
+let interval;
+
 function keyUpHandler(e) {
-    if(e.key == "Right" || e.key == "ArrowRight") {
+    if(e.key === "Right" || e.key === "ArrowRight") {
         paddleMoveRight = false;
     }
-    else if (e.key == "Left" || e.key == "ArrowLeft") {
+    else if (e.key === "Left" || e.key === "ArrowLeft") {
         paddleMoveLeft = false;
     }
-    if(e.keyCode == 32 && !running) {
+    if(e.keyCode === 32 && !running) {
         initializeBricks();
         initGame();
         interval = setInterval(draw, 10);
@@ -107,9 +86,9 @@ function initGame() {
 }
 
 function initializeBricks() {
-    for(var brickColumn = 0; brickColumn <= brickColumnCount; brickColumn++) {
+    for(let brickColumn = 0; brickColumn <= brickColumnCount; brickColumn++) {
         bricks[brickColumn] = [];
-        for(var brickRow = 0; brickRow <= brickRowCount; brickRow++) {
+        for(let brickRow = 0; brickRow <= brickRowCount; brickRow++) {
             bricks[brickColumn][brickRow] = { x: 0, y: 0, status: 1};
         }
     }
@@ -132,15 +111,15 @@ function drawPaddle() {
 }
 
 function drawBricks() {
-    for( var column = 0; column < brickColumnCount; column++) {
-        for(var row = 0; row < brickRowCount; row++) {
-            if(bricks[column][row].status == 1) {
-                var brickX = (column*(brickwidth+brickPadding))+brickOffsetLeft;
-                var brickY = (row*(brickHeight+brickPadding))+brickOffsetTop;
+    for(let column = 0; column < brickColumnCount; column++) {
+        for(let row = 0; row < brickRowCount; row++) {
+            if(bricks[column][row].status === 1) {
+                let brickX = (column * (brickWidth + brickPadding)) + brickOffsetLeft;
+                let brickY = (row * (brickHeight + brickPadding)) + brickOffsetTop;
                 bricks[column][row].x = brickX;
                 bricks[column][row].y = brickY;
                 context.beginPath();
-                context.rect(brickX, brickY, brickwidth, brickHeight);
+                context.rect(brickX, brickY, brickWidth, brickHeight);
                 context.fillStyle = mainColor;
                 context.fill();
                 context.closePath();    
@@ -190,7 +169,7 @@ function draw() {
         }
     }
 
-    markHit = noHitColor;
+    let markHit = noHitColor;
     //bounce from bottom only if hit by paddle
     if(ball_x >= paddleX && ball_x <= paddleX+paddleWidth) {
         markHit = hitColor;
@@ -216,7 +195,7 @@ function draw() {
     document.getElementById('paddle-x').innerHTML = paddleX.toString();
     document.getElementById('ball-x').innerHTML = ball_x.toString();
     document.getElementById('ball-y').innerHTML = ball_y.toString();
-    document.getElementById('hitbar').style.backgroundColor = markHit;
+    document.getElementById('hitBar').style.backgroundColor = markHit;
 
     collisionDetection();
     drawBall();
@@ -226,7 +205,7 @@ function draw() {
 }
 
 function switchColor() {
-    if(color == ballColor2) {
+    if(color === ballColor2) {
         color = mainColor;
     } else {
         color = ballColor2;
@@ -234,15 +213,15 @@ function switchColor() {
 }
 
 function collisionDetection() {
-    for(var c=0; c < brickColumnCount; c++) {
-        for(var r=0; r<brickRowCount; r++) {
-            var b = bricks[c][r];
-            if(b.status == 1) {
-                if(ball_x > b.x && ball_x < b.x+brickwidth && ball_y > b.y && ball_y < b.y+brickHeight) {
+    for(let c=0; c < brickColumnCount; c++) {
+        for(let r=0; r<brickRowCount; r++) {
+            let b = bricks[c][r];
+            if(b.status === 1) {
+                if(ball_x > b.x && ball_x < b.x+brickWidth && ball_y > b.y && ball_y < b.y+brickHeight) {
                     dy = -dy;
                     b.status = 0;
                     score++;
-                    if(score == brickRowCount*brickColumnCount) {
+                    if(score === brickRowCount*brickColumnCount) {
                         alert("You've won. Press Space to play again.");
                         clearInterval(interval);
                         running = false;
@@ -254,5 +233,5 @@ function collisionDetection() {
 }
 
 
-var interval = setInterval(draw, 10);
+interval = setInterval(draw, 10);
 running = true;
