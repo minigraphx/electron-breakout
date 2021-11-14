@@ -14,7 +14,7 @@ const isDevelopment = process.env.NODE_ENV !== 'production'
 const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 1024,
+    width: 600,
     height: 800,
   });
 

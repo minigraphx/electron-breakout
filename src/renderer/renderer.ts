@@ -1,3 +1,5 @@
+// noinspection JSUnusedAssignment
+
 /**
  * This file will automatically be loaded by webpack and run in the "renderer" context.
  * To learn more about the differences between the "main" and the "renderer" context in
@@ -25,236 +27,259 @@
  *  });
  * ```
  */
-import Phaser from 'phaser';
+
 import '../index.css';
-import GameObject = Phaser.GameObjects.GameObject;
-import CursorKeys = Phaser.Types.Input.Keyboard.CursorKeys;
-import Text = Phaser.GameObjects.Text;
+import 'kaboom'
+import type {KaboomCtx} from 'kaboom';
+import kaboom, {GameObj} from "kaboom";
 
-export class BreakoutScene extends Phaser.Scene {
+const k = kaboom({
+    background: [0xee, 0xee, 0xee],
+    height: 800,
+    width: 600,
+    debug: true
+})
 
-    private score: number;
-    private lives: number;
-    private isPaused: boolean;
-    private cursorKeys: CursorKeys;
-    private paddle: Phaser.GameObjects.Rectangle;
+const ballRadius        = 5;
+let ballVelocity      = 200;
 
-    private mainColor         = 0x0095DD;
-    private ballRadius        = 10;
-    private ballVelocity      = 200;
-    private paddleSpeed       = 300;
-    private paddleHeight      = 10;
-    private paddleWidth       = 75;
-    private paddleDisplayHeight: number;
-    private brickRowCount     = 3;
-    private brickColumnCount  = 5;
-    private brickWidth        = 75;
-    private brickHeight       = 20;
-    private brickPadding      = 10;
-    private brickOffsetTop    = 30;
-    private brickOffsetLeft   = 60;
-    private noHitColor        = 0xCCCCCC;
-    private hitColor          = 0xFF0000;
-    private hitMarker: Phaser.GameObjects.Rectangle;
-    private bricks: Phaser.Physics.Arcade.StaticGroup;
-    private ball: Phaser.GameObjects.Ellipse;
+const paddleSpeed       = 300;
+const paddleHeight      = 10;
+const paddleWidth       = 75;
+const paddleDisplayHeight = 50;
 
-    private screenWidth: number;
-    private screenHeight: number;
-    private livesHUD: Text;
-    private scoreHUD: Text;
-    private winText: Text;
-    private gameOverText: Text;
+let bricks: GameObj[] = [];
+const brickRowCount     = 1;
+const brickColumnCount  = 2;
+const brickWidth        = 75;
+const brickHeight       = 20;
+const brickPadding      = 10;
+const brickOffsetTop    = 30;
+const brickOffsetLeft   = 30;
 
-    constructor() {
-        super('');
-    }
+const mainColor         = { r: 0x00, g: 0x95, b: 0xDD };
 
-    initialize(): void {
-        this.score = 0;
-        this.lives = 3;
+let score: number = 0;
+let lives: number = 3;
 
-        /** @var isPaused Boolean */
-        this.isPaused = false;
-        this.screenWidth = config.width as number;
-        this.screenHeight = config.height as number;
-        this.paddleDisplayHeight = this.screenHeight - this.screenHeight / 10;
-        //Phaser.Scene.call(this, {key: 'breakout'});
-    }
+let livesHUD: GameObj;
+let scoreHUD: GameObj;
 
-    preload(): void {
-        this.initialize();
-        //game.scale.scaleMode = Phaser.ScaleModes.DEFAULT;
-        //game.scale.pageAlignHorizontally = true;
-        //game.scale.pageAlignVertically = true;
-    }
+let paddle: GameObj;
+let ball: GameObj;
 
-    create(): void {
-        this.cursorKeys = this.input.keyboard.createCursorKeys();
+let winLabel: GameObj;
+let restartLabel: GameObj;
+let looseLabel: GameObj;
 
-        /** @type Phaser.GameObjects.Rectangle */
-        this.paddle = this.add.rectangle(this.screenWidth, this.paddleDisplayHeight, this.paddleWidth, this.paddleHeight, this.mainColor);
+let restart = true;
 
-        // bounds are anywhere but bottom
-        this.physics.world.setBoundsCollision(true, true, true, false);
-        this.physics.world.enable(this.paddle);
-
-        const paddleBody = this.paddle.body as Phaser.Physics.Arcade.Body;
-        paddleBody.setCollideWorldBounds(true);
-        this.physics.world.collide(this.paddle);
-
-        // create bricks
-        this.bricks = this.physics.add.staticGroup();
-        this.createBricks();
-
-        /** @type Phaser.GameObjects.Ellipse */
-        // create ball
-        this.ball = this.add.ellipse(this.screenWidth / 2 - this.ballRadius, this.screenHeight / 2 - this.ballRadius, this.ballRadius, this.ballRadius, this.mainColor);
-        this.physics.world.enable(this.ball);
-        this.resetBall();
-        this.physics.world.collide(this.ball);
-        const ballBody = this.ball.body as Phaser.Physics.Arcade.Body;
-        ballBody.setCollideWorldBounds(true);
-        ballBody.setBounce(1, 1);
-
-        this.physics.add.collider(this.ball, this.bricks, this.hitBrick, null, this);
-        this.physics.add.collider(this.ball, this.paddle, this.hitPaddle, null, this);
-
-        this.livesHUD = this.add.text( 20, this.screenHeight - 20, 'Lives: ' + this.lives, {color: '0xFFFFFF'});
-        this.hitMarker = this.add.rectangle(this.screenWidth / 2, this.screenHeight - 12, 40, 10, this.noHitColor);
-        this.scoreHUD = this.add.text(this.screenWidth - 100, this.screenHeight - 20, 'Score: ' + this.score, {color: '0xFFFFFF'});
-
-        this.gameOverText = this.add.text(this.screenWidth / 2, this.screenHeight / 2 - 100, 'GAME OVER', {
-            color: 'black',
-            fontSize: '24px',
-            fontFamily: 'Arial'
-        }).setOrigin(.5, .5);
-        this.gameOverText.visible = false;
-
-        this.winText = this.add.text(this.screenWidth / 2 - 50, this.screenHeight / 2 - 100, "You've Won", {
-            color: '0xFFFFFF',
-            fontFamily: 'Arial',
-            fontSize: '24px'
-        }).setOrigin(.5, .5);
-        this.winText.visible = false;
-
-        this.input.on('pointermove', this.mouseMovePaddle);
-    }
-
-    update(): void {
-        //TODO: only call stuff when needed (i.e. modify text)
-        const paddle = this.paddle.body as Phaser.Physics.Arcade.Body;
-
-        paddle.setVelocity(0, 0);
-        if (!this.isPaused) {
-            /** @type Phaser.Physics.Arcade.Body this.paddle */
-
-            if (this.cursorKeys.left.isDown) paddle.setVelocity(-this.paddleSpeed, 0);
-            if (this.cursorKeys.right.isDown) paddle.setVelocity(this.paddleSpeed, 0);
-        } else {
-            const ballBody = this.ball.body as Phaser.Physics.Arcade.Body;
-            ballBody.setVelocity(0, 0);
-        }
-
-        // if the ball is below bottom, reset ball and subtract 1 live
-        if (this.ball.y > this.screenHeight) {
-            this.resetBall();
-            this.lives -= 1;
-        }
-
-        if (this.ball.x > this.paddle.x - this.paddle.width / 2 && this.ball.x < this.paddle.x + this.paddle.width / 2) {
-            this.hitMarker.setStrokeStyle(2, this.hitColor);
-            this.hitMarker.setFillStyle(this.hitColor);
-        } else {
-            this.hitMarker.setStrokeStyle(2, this.noHitColor);
-            this.hitMarker.setFillStyle(this.noHitColor);
-        }
-
-        if (this.lives < 0 || this.bricks.countActive() === 0) {
-            this.isPaused = true;
-            if (this.lives < 0) {
-                this.gameOverText.visible = true;
-            } else {
-                this.winText.visible = true;
-            }
-            if (this.cursorKeys.space.isDown) {
-                this.restart();
-            }
-        } else {
-            this.livesHUD.text = 'Lives: ' + this.lives;
-        }
-
-    }
-
-    restart():void {
-        this.lives = 3;
-        this.score = 0;
-        this.isPaused = false;
-        this.gameOverText.visible = false;
-        this.winText.visible = false;
-        this.resetLevel();
-    }
-
-    mouseMovePaddle(pointer: Phaser.Input.Pointer):void {
-        if (!this.scene.isPaused) {
-            const mousePos = pointer.position.x;
-            const paddleBody = breakout.paddle.body as Phaser.Physics.Arcade.Body;
-            if ((mousePos < 0 && paddleBody.position.x > 0) || (mousePos < breakout.screenWidth && paddleBody.position.x < breakout.screenWidth)) {
-                breakout.paddle.setPosition(mousePos, breakout.paddleDisplayHeight);
-            }
-        }
-    }
-
-    hitBrick(ball: GameObject, brick: GameObject): void {
-        brick.destroy(); // better just deactivate bricks and reactivate on reset !?
-        this.score += 1;
-        this.scoreHUD.text = 'Score: ' + this.score;
-    }
-
-    hitPaddle(): void {
-        this.ball.body.velocity.y = -this.ballVelocity;
-    }
-
-    resetBall(): void {
-        this.ball.setPosition(this.paddle.x, this.screenHeight / 2);
-        const ball = this.ball.body as Phaser.Physics.Arcade.Body;
-        ball.setVelocity(this.ballVelocity * (-.5 + Math.random()), this.ballVelocity);
-    }
-
-    resetLevel(): void {
-        this.bricks.clear(false, true);
-        this.resetBall();
-        this.createBricks();
-    }
-
-    createBricks(): void {
-        for (let column = 0; column < this.brickColumnCount; column++) {
-            for (let row = 0; row < this.brickRowCount; row++) {
-                const brickX = (column * (this.brickWidth + this.brickPadding)) + this.brickOffsetLeft;
-                const brickY = (row * (this.brickHeight + this.brickPadding)) + this.brickOffsetTop;
-                const brick = this.add.rectangle(brickX, brickY, this.brickWidth, this.brickHeight, this.mainColor);
-                this.bricks.add(brick);
-            }
-        }
-    }
-
+function init() {
+    lives = 3;
+    score = 0;
+    winLabel.hidden = true;
+    looseLabel.hidden = true;
+    restartLabel.hidden = true;
 }
 
-const breakout = new BreakoutScene();
-export const config: Phaser.Types.Core.GameConfig = {
-    type: Phaser.AUTO, // Phaser.WEBGL or Phaser.CANVAS
-    width: 460,
-    height: 500,
-    backgroundColor: '#eee',
-    scene: [ breakout ],
-    physics: {
-        default: 'arcade',
-        arcade: {
-//            debug: true,
-        },
+function createBall(k: KaboomCtx): GameObj {
+    return k.add([
+        k.circle(ballRadius),
+        k.color(mainColor.r, mainColor.g, mainColor.b),
+        k.pos(k.width() * .5, k.height() * .5),
+        k.origin('center'),
+        k.area({ width: ballRadius * 2, height: ballRadius * 2}),
+        k.solid(),
+        k.cleanup(),
+        'ball'
+    ])
+}
+
+function createPaddle(k: KaboomCtx): GameObj {
+    return k.add([
+        k.rect(paddleWidth, paddleHeight),
+        k.color(mainColor.r, mainColor.g, mainColor.b),
+        k.pos(k.width() * .5, k.height() - paddleDisplayHeight),
+        k.origin('bot'),
+        k.area({width: paddleWidth, height:paddleHeight}),
+        k.solid(),
+        k.scale(1),
+        'paddle'
+    ])
+}
+
+function createBricks(k: KaboomCtx) {
+    for (let row = 1; row <= brickRowCount; row++) {
+        for (let column = 1; column <= brickColumnCount; column++) {
+            bricks[column-1 + (row-1) * brickColumnCount] = k.add([
+                k.rect(brickWidth, brickHeight),
+                k.color(mainColor.r, mainColor.g, mainColor.b),
+                k.pos(brickOffsetLeft + column * (brickWidth + brickPadding), brickOffsetTop + row * (brickHeight + brickPadding)),
+                k.origin('center'),
+                k.area({width: brickWidth, height: brickHeight}),
+                k.solid(),
+                'brick'
+            ]);
+        }
     }
-};
+}
 
-const game = new Phaser.Game(config);
+function createLabel(k: KaboomCtx, message: string, x: number, y: number): GameObj {
+    return k.add([
+        k.text(message, {size: 16}),
+        k.pos(x, y),
+        k.color(0x00, 0x00, 0x00),
+        k.origin('botleft'),
+        'label'
+    ]);
+}
 
-export default game;
+function resetBall() {
+    ball.pos.x = k.width() / 2;
+    ball.pos.y = k.height() / 2;
+}
+
+function createHitMarker() {
+    return k.add([
+        k.rect(60, 16),
+        k.origin("botleft"),
+        k.pos(k.width() * .5, k.height() - 10),
+        k.color(k.WHITE),
+        'hitMarker'
+    ])
+}
+
+k.scene('main', () => {
+    livesHUD = createLabel(k,'Lives: ' + lives as string, brickOffsetLeft, k.height() - 10);
+    scoreHUD = createLabel(k, 'Score: ' + score as string, k.width() * .3, k.height() - 10);
+    paddle = createPaddle(k);
+    winLabel = createLabel(k, 'You\'ve won', k.width() * .5, k.height() *.4);
+    winLabel.hidden = true;
+    looseLabel = createLabel(k, 'GAME OVER', k.width() *.5, k.height() * .4);
+    looseLabel.hidden = true;
+    restartLabel = createLabel(k, 'Press Space to start again', k.width() * .5, k.height() * .5);
+    restartLabel.hidden = true;
+
+    let paused = true;
+
+    let ballSpeed = ballVelocity;
+    let ballSpeedX = ballVelocity;
+
+    let hitMarker: GameObj;
+    hitMarker = createHitMarker();
+    let noHitColor = k.color(0xCC, 0xCC, 0xCC ).color;
+    let hitColor = k.RED;
+
+    init();
+    createBricks(k);
+    ball = createBall(k);
+
+    k.onKeyDown("left", () => {
+        if( paused ) {
+            return;
+        }
+        /** @type GameObj */
+        if(paddle.pos.x > paddleWidth / 2) {
+            paddle.move(-paddleSpeed, 0);
+        }
+    })
+
+    k.onKeyDown("right", () => {
+        if( paused ) {
+            return;
+        }
+        /** @type GameObj */
+        if(paddle.pos.x < k.width()-paddleWidth/2) {
+            paddle.move(paddleSpeed, 0);
+        }
+    })
+
+    k.onKeyPress('space', () => {
+        if(restart === true) {
+            init();
+            k.destroyAll('brick');
+            createBricks(k);
+//            k.destroy(ball);
+            k.readd(ball);
+            resetBall();
+            scoreHUD.text = 'Score: ' + score as string;
+            livesHUD.text = 'Lives: ' + lives as string;
+        }
+        paused = false
+    })
+
+    k.onMouseMove( (mousePos) => {
+        if( paused ) {
+            return;
+        }
+        if ( mousePos.x > paddleWidth / 2 && mousePos.x < k.width() - paddleWidth / 2 ) {
+            paddle.pos.x = mousePos.x;
+        }
+    })
+
+    k.onDraw('hitMarker', (marker) => {
+        if( (paddle.pos.x - paddleWidth / 2 < ball.pos.x) && (ball.pos.x < paddle.pos.x + paddleWidth / 2) ) {
+            marker.color = hitColor;
+        } else {
+            marker.color = noHitColor;
+        }
+    })
+
+    k.onUpdate( () => {
+        if(!paused) {
+            if( ball.pos.x <= 0 ) {
+                ballSpeedX = ballVelocity
+            }
+            if( ball.pos.x >= k.width() ) {
+                ballSpeedX = -ballVelocity
+            }
+            if(ball.pos.y <= 0) {
+                ballSpeed = ballVelocity;
+            }
+            if(ball.pos.y >= k.height() ) {
+                if( lives > 0) {
+                    lives -= 1;
+                    livesHUD.text = 'Lives: ' + lives as string;
+                    resetBall();
+                } else {
+                    // lost - no lives left
+                    paused = true;
+                    restart = true;
+                    looseLabel.hidden = false;
+                    restartLabel.hidden = false;
+                }
+            }
+            ball.move(ballSpeedX, ballSpeed);
+        }
+    })
+
+    k.onCollide('ball', 'paddle', () => {
+        ballSpeed = -ballVelocity;
+    })
+
+    k.onCollide('ball', 'brick', (ball, brick, collision) => {
+        if( !collision.target.is('brick') ) {
+            return
+        }
+        ballSpeed = ballVelocity;
+        brick.hidden = true;
+        brick.destroy();
+        score += 1;
+        scoreHUD.text = 'Score: ' + score as string;
+        let won = true;
+        // last brick not counted ?
+        k.every('brick', (brick) => {
+            if( !brick.hidden ) {
+                won = false
+            }
+        })
+        if(won) {
+            paused = true;
+            restart = true;
+            winLabel.hidden = false;
+            restartLabel.hidden = false;
+        }
+    })
+});
+
+k.go('main');
