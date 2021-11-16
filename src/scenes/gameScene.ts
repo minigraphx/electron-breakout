@@ -105,13 +105,11 @@ export default class gameScene extends Phaser.Scene {
             'Score: ' + this.score,
             {color: 'black'});
 
-
         this.input.on('pointermove', this.mouseMovePaddle);
     }
 
     update() {
-        //TODO: only call stuff when needed (i.e. modify text)
-
+        // control paddle with keys
         this.paddleBody.setVelocity(0, 0);
         if (!this.isPaused) {
             if (this.cursorKeys.left.isDown) this.paddleBody.setVelocity(-this.paddleSpeed, 0);
@@ -126,6 +124,7 @@ export default class gameScene extends Phaser.Scene {
             this.lives -= 1;
         }
 
+        // set hitmarker
         if (this.ball.x > this.paddle.x - this.paddle.width / 2 && this.ball.x < this.paddle.x + this.paddle.width / 2) {
             this.hitMarker.setStrokeStyle(2, this.hitColor);
             this.hitMarker.setFillStyle(this.hitColor);
@@ -134,6 +133,7 @@ export default class gameScene extends Phaser.Scene {
             this.hitMarker.setFillStyle(this.noHitColor);
         }
 
+        // update lives and score, endgame
         if (this.lives < 0 || this.bricks.countActive() === 0) {
             this.isPaused = true;
             if (this.lives < 0) {
@@ -175,7 +175,20 @@ export default class gameScene extends Phaser.Scene {
         this.scoreHUD.text = 'Score: ' + this.score;
     }
 
+    /**
+     * set ball angle and reflect ball
+     */
     hitPaddle() {
+        //todo optimize X velocity and calculate it the same way, not sure which is the best way
+        //todo eventually accellerate ball if paddle is moving during hit - the faster the more it accelerates
+        if(this.ball.x < this.paddle.x) {
+            let newVelX = (this.paddle.x - this.ball.x) / (this.paddle.width / 2) * 90;
+            this.ball.body.velocity.x = newVelX * -1
+        } else {
+            let part = (this.paddle.x + this.paddle.width) - this.ball.x
+            let newVelX = (1 - (part / this.paddle.width)) * 200;
+            this.ball.body.velocity.x = newVelX
+        }
         this.ball.body.velocity.y = -this.ballVelocity;
     }
 

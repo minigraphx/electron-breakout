@@ -1,6 +1,3 @@
-// todo: hit help could use the angle the ball moves to show if it will hit
-// todo: ball could bounce with different angles depending on where paddle is hit and if paddle is moving or not
-// todo: debug mode could create just 1 brick
 import Phaser from 'phaser';
 
 import gameScene from '../scenes/gameScene';
