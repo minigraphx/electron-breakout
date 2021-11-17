@@ -1,4 +1,8 @@
 import Phaser from "phaser";
+import imgData from '../assets/items.json';
+// @ts-ignore
+import img from '../assets/items.png';
+import Sprite = Phaser.GameObjects.Sprite;
 
 export default class gameScene extends Phaser.Scene {
     private mainColor: number = 0x0095DD;
@@ -22,14 +26,14 @@ export default class gameScene extends Phaser.Scene {
 
     private paddleHeight: number = 10;
     private paddleWidth: number = 75;
-    private paddle: Phaser.GameObjects.Rectangle = null;
+    private paddle: Sprite;
     private paddleSpeed: number = 300;
     private paddleBody: Phaser.Physics.Arcade.Body = null;
 
     private height: number;
     private width: number;
 
-    private ball: Phaser.GameObjects.Ellipse = null;
+    private ball: Phaser.GameObjects.Sprite = null;
     private ballRadius: number = 10;
     private ballVelocity: number = 200;
     private ballBody: Phaser.Physics.Arcade.Body = null;
@@ -58,19 +62,24 @@ export default class gameScene extends Phaser.Scene {
         this.width = this.game.config.width as number
 
         this.paddleHeight = this.height - this.height / 10; // set paddlePosition as paddleHeight
-        this.paddle = this.add.rectangle(this.width / 2 - this.paddleWidth / 2, this.paddleHeight, this.paddleWidth, 10, this.mainColor);
     }
 
     preload() {
-        /*
-        this.game.scale.scaleMode = Phaser.ScaleModes.DEFAULT;
-        game.scale.pageAlignHorizontally = true;
-        game.scale.pageAlignVertically = true;
-         */
+        // also imgData is usable, but it gives a type error
+        // @ts-ignore
+        this.load.multiatlas('items', imgData);
+        let image = img; // to ensure asset ist copied
     }
 
     create() {
         this.initialize();
+
+        this.ball = this.add.sprite(50, 50, 'items', 'ballBlack_09.png')
+        this.ball.setScale(.08, .08)
+
+        this.paddle = this.add.sprite(this.width/2, this.height * .9, 'items', 'paddle_04.png')
+        this.paddle.setScale(.15, .15)
+
         this.cursorKeys = this.input.keyboard.createCursorKeys();
 
         // bounce anywhere but bottom
@@ -86,7 +95,6 @@ export default class gameScene extends Phaser.Scene {
         this.createBricks();
 
         // create ball
-        this.ball = this.add.ellipse(this.width / 2 - this.ballRadius, this.height / 2 - this.ballRadius, this.ballRadius, this.ballRadius, this.mainColor);
         this.physics.world.enable(this.ball);
         this.resetBall();
         this.ballBody = this.ball.body as Phaser.Physics.Arcade.Body
@@ -209,7 +217,9 @@ export default class gameScene extends Phaser.Scene {
             for (let row = 0; row < this.brickRowCount; row++) {
                 let brickX = (column * (this.brickWidth + this.brickPadding)) + this.brickOffsetLeft;
                 let brickY = (row * (this.brickHeight + this.brickPadding)) + this.brickOffsetTop;
-                let brick = this.add.rectangle(brickX, brickY, this.brickWidth, this.brickHeight, this.mainColor);
+                let brick = this.add.sprite(brickX, brickY, 'items', 'tileBlue_02.png')
+                brick.displayWidth = this.brickWidth
+                brick.displayHeight = this.brickHeight
                 this.bricks.add(brick);
             }
         }
