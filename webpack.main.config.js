@@ -1,3 +1,13 @@
+const rules = require("./webpack.rules");
+rules.push({
+  test: /\.(png|json)$/i,
+  exclude: /(node_modules|\.webpack)/,
+  type: 'asset/resource',
+  generator: {
+    filename: '[name].[ext]'
+  }
+});
+
 module.exports = {
   /**
    * This is the main entry point for your application, it's the first file
@@ -9,6 +19,6 @@ module.exports = {
     rules: require('./webpack.rules'),
   },
   resolve: {
-    extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json']
+    extensions: ['.js', '.ts', '.jsx', '.tsx', '.css']
   },
 };

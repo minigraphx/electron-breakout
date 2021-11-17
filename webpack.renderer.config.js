@@ -6,6 +6,15 @@ rules.push({
   use: [{ loader: 'style-loader' }, { loader: 'css-loader' }],
 });
 
+rules.push({
+  test: /\.(png|json)$/i,
+  exclude: /(node_modules|\.webpack)/,
+  type: 'asset/resource',
+  generator: {
+    filename: '[name][ext]'
+  }
+});
+
 module.exports = {
   module: {
     rules,
