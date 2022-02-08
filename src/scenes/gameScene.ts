@@ -1,11 +1,10 @@
 import Phaser from "phaser";
-import imgData from '../assets/items.json';
+import imgData from '../assets/items-opt.json';
 // @ts-ignore
-import img from '../assets/items.png';
+import img from '../assets/items-opt.png';
 import Sprite = Phaser.GameObjects.Sprite;
 
 export default class gameScene extends Phaser.Scene {
-    private mainColor: number = 0x0095DD;
     private cursorKeys: Phaser.Types.Input.Keyboard.CursorKeys;
 
 
@@ -60,8 +59,6 @@ export default class gameScene extends Phaser.Scene {
         this.isPaused = false;
         this.height = this.game.config.height as number
         this.width = this.game.config.width as number
-
-        this.paddleHeight = this.height - this.height / 10; // set paddlePosition as paddleHeight
     }
 
     preload() {
@@ -78,7 +75,8 @@ export default class gameScene extends Phaser.Scene {
         this.ball.setScale(.08, .08)
 
         this.paddle = this.add.sprite(this.width/2, this.height * .9, 'items', 'paddle_04.png')
-        this.paddle.setScale(.15, .15)
+        this.paddle.displayHeight = this.paddleHeight;
+        this.paddle.displayWidth = this.paddleWidth;
 
         this.cursorKeys = this.input.keyboard.createCursorKeys();
 
@@ -172,7 +170,7 @@ export default class gameScene extends Phaser.Scene {
         if (!this.scene.isPaused && scene.paddleBody !== undefined) {
             let mousePos = pointer.position.x
             if (0 <= mousePos && mousePos < scene.width) {
-                scene.paddle.setPosition(mousePos, scene.paddleHeight);
+                scene.paddle.setPosition(mousePos, scene.height * .9);
             }
         }
     }
@@ -190,12 +188,11 @@ export default class gameScene extends Phaser.Scene {
         //todo optimize X velocity and calculate it the same way, not sure which is the best way
         //todo eventually accellerate ball if paddle is moving during hit - the faster the more it accelerates
         if(this.ball.x < this.paddle.x) {
-            let newVelX = (this.paddle.x - this.ball.x) / (this.paddle.width / 2) * 90;
+            let newVelX = (this.paddle.x - this.ball.x) / (this.paddle.displayWidth / 2) * 90;
             this.ball.body.velocity.x = newVelX * -1
         } else {
-            let part = (this.paddle.x + this.paddle.width) - this.ball.x
-            let newVelX = (1 - (part / this.paddle.width)) * 200;
-            this.ball.body.velocity.x = newVelX
+            let part = (this.paddle.x + this.paddle.displayWidth) - this.ball.x
+            this.ball.body.velocity.x = (1 - (part / this.paddle.displayWidth)) * 200
         }
         this.ball.body.velocity.y = -this.ballVelocity;
     }
